@@ -203,45 +203,60 @@ When you've attempted the 5 exercises (or want to stop partway), come back and s
 
 ## Solutions
 
-- 1.For each vendor_id, rank trips by fare_amount descending and return only the top 3 per vendor 
-(think carefully: ROW_NUMBER or RANK?).
-with vender_trip as (
-select trip_id,vendor_id, fare_amount, row_number() over (PARTITION BY vendor_id order by fare_amount DESC) as rank
-from trips
+All 5 reviewed and correct.
+
+**1. Top 3 trips per vendor by fare_amount** (`ROW_NUMBER`, not `RANK` — need exactly 3)
+```sql
+WITH vendor_trips AS (
+    SELECT trip_id, vendor_id, fare_amount,
+           ROW_NUMBER() OVER (PARTITION BY vendor_id ORDER BY fare_amount DESC) AS rnk
+    FROM trips
 )
-- SELECT trip_id,vendor_id,fare_amount from vender_trip where rank <=3
+SELECT trip_id, vendor_id, fare_amount
+FROM vendor_trips
+WHERE rnk <= 3;
+```
 
-- 2.Compute a running total of fare_amount per vendor ordered by pickup_datetime 
-(the rolling-7-day version needs more days of data than this toy set — understand the pattern here, 
-we'll do a real rolling-window exercise once BigQuery is set up in Phase 3)
+**2. Running total of fare_amount per vendor**
+```sql
+SELECT trip_id, fare_amount,
+       SUM(fare_amount) OVER (PARTITION BY vendor_id ORDER BY pickup_datetime) AS running_total
+FROM trips;
+```
 
-- select trip_id,fare_amount,sum(fare_amount) over(partition by vendor_id order by pickup_datetime) as rolling_7_days
-from trips;
+**3. Gap detection — diff from previous trip's pickup_datetime per vendor**
+```sql
+WITH vendor_trips AS (
+    SELECT trip_id, vendor_id, pickup_datetime,
+           LAG(pickup_datetime) OVER (PARTITION BY vendor_id ORDER BY pickup_datetime ASC) AS prev_pickup_datetime
+    FROM trips
+)
+SELECT trip_id, vendor_id, pickup_datetime, prev_pickup_datetime,
+       pickup_datetime - prev_pickup_datetime AS timediff
+FROM vendor_trips;
+```
 
+**4. Recursive CTE — date series 2024-01-01 to 2024-01-10**
+```sql
+WITH RECURSIVE calendar AS (
+    SELECT DATE('2024-01-01') AS date
+    UNION ALL
+    SELECT DATE(date, '+1 day')
+    FROM calendar
+    WHERE date < DATE('2024-01-10')
+)
+SELECT * FROM calendar;
+```
 
-- 3.For each trip, compute the difference in pickup_datetime from the previous trip by the same vendor_id 
-(gap detection pattern — note pickup_datetime is stored as TEXT here, so just show the LAG value, don't worry about real date-diff math yet)
-
-- with vendor_trips as (
-select trip_id,vendor_id,pickup_datetime, 
-LAG(pickup_datetime) OVER(PARTITION by vendor_id ORDER by pickup_datetime ASC) as prevday_pickupdatetime
-from trips
-  )
- select trip_id, vendor_id,pickup_datetime,prevday_pickupdatetime,pickup_datetime-prevday_pickupdatetime as timediff
- from vendor_trips
- 
- 
--  4.Write a recursive CTE that generates a date series from 2024-01-01 to 2024-01-10 
-(common "no calendar table" trick — no source table needed, pure recursive CTE).
-
-- with calender as (
-  select DATE('2024-01-01') as date
-  
-  UNION ALL
-  
-  SELECT date + 1
-  from calender where date <= DATE('2024-01-10')
- )
- select * from calender
-
+**5. Correlated subquery → window function rewrite** (customers with an order over 500)
+```sql
+SELECT DISTINCT customer_id, name, max_amount
+FROM (
+    SELECT c.customer_id, c.name,
+           MAX(o.amount) OVER (PARTITION BY o.customer_id) AS max_amount
+    FROM customers c
+    INNER JOIN orders o ON o.customer_id = c.customer_id
+)
+WHERE max_amount > 500;
+```
 
