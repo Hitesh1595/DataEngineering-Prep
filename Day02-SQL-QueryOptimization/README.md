@@ -108,7 +108,8 @@ CREATE INDEX idx_trips_vendor_fare ON trips(vendor_id, fare_amount);
 5. Another thought exercise: a table has 1 million rows, `is_deleted` boolean, only 50 rows have `is_deleted = true`. Would an index on `is_deleted` help a query filtering `WHERE is_deleted = true`? Would it help `WHERE is_deleted = false`? Why the difference?
 
 ## Video (per your preference — watch over reading docs)
-- YouTube: **Hussein Nasser** channel — search "how indexes work" or "EXPLAIN ANALYZE" — backend/DB engineering channel, goes deep on exactly this (B-tree internals, query planning), excellent for this exact topic
+- YouTube, **Hussein Nasser** channel — search the exact playlist title **"Fundamentals of Database Engineering"** — full course, has a dedicated indexing module covering B-tree internals + query plans in depth
+- Same channel, standalone videos to search by exact title: **"Key vs Non-Key Column Database Indexing"**, **"Indexing in PostgreSQL vs MySQL"**, **"When Indexes Are Useless"**
 - YouTube: **pganalyze** channel (if using Postgres day-to-day) — search "EXPLAIN" — short, focused breakdowns of reading real query plans
 
 ## Reference (docs only where no good video covers it as well)
