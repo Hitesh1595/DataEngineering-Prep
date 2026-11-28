@@ -92,6 +92,18 @@ SQLite has **no native table partitioning** — the `CREATE TABLE ... PARTITION 
 4. You hash-partition a `user_events` table by `user_id` into 8 partitions to spread write load evenly. A query comes in: `WHERE user_id = 42`. Does this query benefit from partition pruning the same way a range-partitioned date query does? Why or why not (think about what hash partitioning is actually optimizing for).
 5. A table gets partitioned by day for a system that only ingests ~200 rows/day. After a year, how many partitions exist, and what's likely to go wrong (connect this to the "small files problem" mentioned above)?
 
+## Solutions
+
+**1.** Range partitioning, **monthly** granularity. Range partitioning prunes out every month outside the queried window. Monthly (not daily) avoids the over-partitioning gotcha — a 30/90-day query window still only touches 1-3 monthly partitions, while daily granularity would mean hundreds of tiny partitions for no extra pruning benefit.
+
+**2.** List partitioning by `tenant_id`. A single-tenant query only scans that one tenant's partition — every other tenant's data is pruned out entirely.
+
+**3.** No, partitioning doesn't help — there's no date filter, so every monthly partition still has to be scanned for `customer_id = 123`. Partitioning and indexing are separate levers: the real fix here is a (non-clustered) **index on `customer_id`**, which works independently of how the table is partitioned.
+
+**4.** Yes, for this exact query — hashing `user_id = 42` lands on exactly one partition, same pruning benefit as a range match. The gap shows up on a *range* query instead (`WHERE user_id BETWEEN 10 AND 50`): hashing destroys ordering, so those ids scatter across all 8 partitions and nothing gets pruned. Hash partitioning optimizes for equality lookups + even write distribution, not range queries.
+
+**5.** ~365 partitions after a year, each holding only ~200 rows — way too many near-empty partitions. The planner has to consider every partition's metadata even for a simple query, so overhead grows while each partition does almost no useful pruning work — the same "small files problem" you'll see again with Parquet files in cloud storage.
+
 ## Video (verified titles — search these exact phrases)
 - YouTube, **Hussein Nasser** channel — exact video title: **"They Enabled Postgres Partitioning and their Backend Fell Apart"** — real-world case study of partitioning done wrong, directly relevant to exercise 3/5 above
 - Same channel, course playlist **"Fundamentals of Database Engineering"** — module **"06. Database Partitioning"** — the structured version of this same material
@@ -102,3 +114,9 @@ SQLite has **no native table partitioning** — the `CREATE TABLE ... PARTITION 
 ---
 
 Attempt the 5 reasoning exercises, come back when done — then **Day 04: Python for Data Engineering (Pandas/NumPy, file formats)**.
+
+
+## NOTE(PERSONAL)
+- Sharding:method of distribing of data across multiple machines(db server)
+- partition:Splitting of data within same instance or can be split across diff shards(machine have db server)
+
