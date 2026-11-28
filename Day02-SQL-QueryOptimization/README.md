@@ -102,10 +102,26 @@ CREATE INDEX idx_trips_vendor_fare ON trips(vendor_id, fare_amount);
 ```
 
 1. Run `EXPLAIN QUERY PLAN SELECT * FROM trips WHERE vendor_id = 1;` — confirm it uses `idx_trips_vendor_fare`.
-2. Run `EXPLAIN QUERY PLAN SELECT * FROM trips WHERE fare_amount > 20;` — does it use the index? Explain *why not*, in your own words, using the leftmost-prefix rule.
+2. Run `EXPLAIN QUERY PLAN SELECT * FROM trips WHERE fare_amount > 20;` — does it use the index? Explain *why not*, using the leftmost-prefix rule.
 3. Write the query that *would* let this composite index fully narrow the search (filtering on both columns), and confirm via `EXPLAIN QUERY PLAN` that it's used.
-4. This one's a thought exercise, no sandbox needed: you have `WHERE LOWER(vendor_name) = 'uber'` on a column with a plain index on `vendor_name`. Will the index be used? What would you change?
-5. Another thought exercise: a table has 1 million rows, `is_deleted` boolean, only 50 rows have `is_deleted = true`. Would an index on `is_deleted` help a query filtering `WHERE is_deleted = true`? Would it help `WHERE is_deleted = false`? Why the difference?
+4. Thought exercise: you have `WHERE LOWER(vendor_name) = 'uber'` on a column with a plain index on `vendor_name`. Will the index be used? What would you change?
+5. Thought exercise: a table has 1 million rows, `is_deleted` boolean, only 50 rows have `is_deleted = true`. Would an index on `is_deleted` help a query filtering `WHERE is_deleted = true`? Would it help `WHERE is_deleted = false`? Why the difference?
+
+## Solutions
+
+**1.** Yes — `EXPLAIN QUERY PLAN SELECT * FROM trips WHERE vendor_id = 1;` uses `idx_trips_vendor_fare` (`vendor_id` is the leftmost column).
+
+**2.** No. Leftmost-prefix rule — the index is on `(vendor_id, fare_amount)`, so it can only be used when the query filters on `vendor_id` alone, or `vendor_id AND fare_amount`. Filtering on `fare_amount` alone skips the leftmost column, so the engine falls back to a full table scan.
+
+**3.**
+```sql
+EXPLAIN QUERY PLAN SELECT * FROM trips WHERE vendor_id = 1 AND fare_amount > 20;
+```
+Uses the index fully — both columns filtered, in the index's own column order.
+
+**4.** Index is not used — wrapping the column in `LOWER()` forces the engine to compute the function on every row before comparing, so the plain index on `vendor_name` can't be used. Fix depends on the data: if `vendor_name` is already stored consistently-cased, drop `LOWER()` and query the raw value directly. If case is actually mixed in the data, instead create a **functional/expression index** — `CREATE INDEX idx_vendor_lower ON vendors (LOWER(vendor_name));` — so the index itself is pre-lowered and both correctness and index usage are kept.
+
+**5.** Index helps a lot on `WHERE is_deleted = true` — only 50 rows out of 1M match, that's highly selective, the index jumps straight to those 50 instead of scanning everything. Index does **not** help on `WHERE is_deleted = false` — that matches 999,950 rows (almost the whole table), so a full table scan is as cheap or cheaper than bouncing through an index. Rule: an index earns its keep on the *rare* value, not a fixed boolean direction — selectivity is what matters, not which side of the boolean you're filtering.
 
 ## Video (per your preference — watch over reading docs)
 - YouTube, **Hussein Nasser** channel — search the exact playlist title **"Fundamentals of Database Engineering"** — full course, has a dedicated indexing module covering B-tree internals + query plans in depth
@@ -118,3 +134,9 @@ CREATE INDEX idx_trips_vendor_fare ON trips(vendor_id, fare_amount);
 ---
 
 Attempt the 5 exercises (3 hands-on + 2 thought exercises), come back when done — I'll review, then we move to **Day 03: Partitioning strategies**.
+
+## IMPORTANT(INDEXING)
+Query	Index on column?	What happens
+WHERE id = 42	PK (clustered)	1 tree walk
+WHERE email = 'a@b.com'	Non-clustered index	2 tree walks
+WHERE email = 'a@b.com'	No index	Sequential scan (read all pages)
