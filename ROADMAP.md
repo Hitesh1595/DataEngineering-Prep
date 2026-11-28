@@ -51,8 +51,8 @@ Every phase below bolts one more box onto this diagram. By the time you finish P
 | Day | Topic | Status |
 |---|---|---|
 | 01 | SQL — Window functions, CTEs, complex subqueries | ✅ done |
-| 02 | SQL — Query optimization, EXPLAIN plans, indexing (B-tree/hash/composite) | ✅ content ready (`Day02-SQL-QueryOptimization/`) |
-| 03 | SQL — Partitioning strategies (range/list/hash) + practice set | pending |
+| 02 | SQL — Query optimization, EXPLAIN plans, indexing (B-tree/hash/composite) | ✅ done |
+| 03 | SQL — Partitioning strategies (range/list/hash) + practice set | ✅ content ready (`Day03-SQL-Partitioning/`) |
 | 04 | Python for DE — Pandas/NumPy, file formats (Parquet/Avro/ORC/JSON/CSV) | pending |
 | 05 | Python for DE — OOP patterns, clean/testable pipeline code | pending |
 | 06 | Data Modeling — Star vs Snowflake, Fact/Dim tables, OLAP vs OLTP | pending |
