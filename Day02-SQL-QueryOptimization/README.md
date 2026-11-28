@@ -135,8 +135,10 @@ Uses the index fully — both columns filtered, in the index's own column order.
 
 Attempt the 5 exercises (3 hands-on + 2 thought exercises), come back when done — I'll review, then we move to **Day 03: Partitioning strategies**.
 
-## IMPORTANT(INDEXING)
-Query	Index on column?	What happens
-WHERE id = 42	PK (clustered)	1 tree walk
-WHERE email = 'a@b.com'	Non-clustered index	2 tree walks
-WHERE email = 'a@b.com'	No index	Sequential scan (read all pages)
+## IMPORTANT (Indexing)
+
+| Query | Index on column? | What happens |
+|---|---|---|
+| `WHERE id = 42` | PK (clustered) | 1 tree walk |
+| `WHERE email = 'a@b.com'` | Non-clustered index | 2 tree walks |
+| `WHERE email = 'a@b.com'` | No index | Sequential scan (read all pages) |
